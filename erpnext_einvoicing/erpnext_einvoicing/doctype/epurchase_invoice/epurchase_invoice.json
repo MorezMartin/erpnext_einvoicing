@@ -1,0 +1,401 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-07-28 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "conversion_status",
+  "purchase_invoice",
+  "invoice_profile",
+  "column_break_header",
+  "approved_platform",
+  "company",
+  "buyer_siret",
+  "flow_id",
+  "supplier_section",
+  "supplier_name_raw",
+  "supplier_siret",
+  "supplier_siren",
+  "supplier_vat",
+  "supplier_uriid",
+  "supplier_address_raw",
+  "column_break_supplier",
+  "supplier_match_status",
+  "matched_supplier",
+  "ethirdparty",
+  "invoice_section",
+  "invoice_number",
+  "is_credit_note",
+  "referenced_invoice_number",
+  "referenced_epurchase_invoice",
+  "invoice_date",
+  "due_date",
+  "column_break_invoice",
+  "currency",
+  "total_ht",
+  "total_vat",
+  "total_ttc",
+  "purchase_flow_section",
+  "purchase_order",
+  "purchase_receipt",
+  "items_section",
+  "items",
+  "lifecycle_section",
+  "lifecycle_logs",
+  "raw_section",
+  "xml_content",
+  "raw_flow_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "EINV-PUR-.YYYY.-.####",
+   "reqd": 1
+  },
+  {
+   "default": "pending",
+   "fieldname": "conversion_status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "pending\nready\nconverted\nrefused",
+   "reqd": 1,
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Purchase Invoice",
+   "options": "Purchase Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_profile",
+   "fieldtype": "Select",
+   "label": "Factur-X Profile",
+   "options": "EN16931\nEXTENDED",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_header",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "approved_platform",
+   "fieldtype": "Link",
+   "label": "Approved Platform",
+   "options": "Approved Platforms",
+   "read_only": 1,
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_list_view": 0
+  },
+  {
+   "fieldname": "buyer_siret",
+   "fieldtype": "Data",
+   "label": "Buyer SIRET",
+   "read_only": 1
+  },
+  {
+   "fieldname": "flow_id",
+   "fieldtype": "Data",
+   "label": "Flow ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "supplier_section",
+   "fieldtype": "Section Break",
+   "label": "Supplier"
+  },
+  {
+   "fieldname": "supplier_name_raw",
+   "fieldtype": "Data",
+   "label": "Supplier Name (Invoice)",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "supplier_siret",
+   "fieldtype": "Data",
+   "label": "SIRET",
+   "read_only": 1
+  },
+  {
+   "fieldname": "supplier_siren",
+   "fieldtype": "Data",
+   "label": "SIREN",
+   "read_only": 1,
+   "insert_after": "supplier_siret"
+  },
+  {
+   "fieldname": "supplier_vat",
+   "fieldtype": "Data",
+   "label": "VAT Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "supplier_uriid",
+   "fieldtype": "Data",
+   "label": "Supplier Routing ID",
+   "read_only": 1,
+   "insert_after": "supplier_vat"
+  },
+  {
+   "fieldname": "supplier_address_raw",
+   "fieldtype": "Small Text",
+   "label": "Address (Invoice)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_supplier",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "unmatched",
+   "fieldname": "supplier_match_status",
+   "fieldtype": "Select",
+   "label": "Supplier Match",
+   "options": "unmatched\nmatched\nethirdparty\ncreated",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "sirene_status",
+   "fieldtype": "Select",
+   "label": "SIRENE Status",
+   "options": "\nok\nwarning\nnot_found",
+   "read_only": 1
+  },
+  {
+   "fieldname": "matched_supplier",
+   "fieldtype": "Link",
+   "label": "Matched Supplier",
+   "options": "Supplier",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ethirdparty",
+   "fieldtype": "Link",
+   "label": "eThirdParty",
+   "options": "eThirdParty",
+   "read_only": 1,
+   "in_list_view": 0
+  },
+  {
+   "fieldname": "invoice_section",
+   "fieldtype": "Section Break",
+   "label": "Invoice Details"
+  },
+  {
+   "fieldname": "invoice_number",
+   "fieldtype": "Data",
+   "label": "Supplier Invoice No.",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_credit_note",
+   "fieldtype": "Check",
+   "label": "Is Credit Note",
+   "read_only": 1,
+   "insert_after": "invoice_number"
+  },
+  {
+   "fieldname": "referenced_invoice_number",
+   "fieldtype": "Data",
+   "label": "Referenced Invoice Number",
+   "read_only": 1,
+   "insert_after": "is_credit_note"
+  },
+  {
+   "fieldname": "referenced_epurchase_invoice",
+   "fieldtype": "Link",
+   "label": "Referenced ePurchase Invoice",
+   "options": "ePurchase Invoice",
+   "read_only": 1,
+   "insert_after": "referenced_invoice_number"
+  },
+  {
+   "fieldname": "invoice_date",
+   "fieldtype": "Date",
+   "label": "Invoice Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_invoice",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_ht",
+   "fieldtype": "Currency",
+   "label": "Total (excl. VAT)",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_vat",
+   "fieldtype": "Currency",
+   "label": "Total VAT",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_ttc",
+   "fieldtype": "Currency",
+   "label": "Total (incl. VAT)",
+   "options": "currency",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "purchase_flow_section",
+   "fieldtype": "Section Break",
+   "label": "Purchase Flow"
+  },
+  {
+   "fieldname": "purchase_order",
+   "fieldtype": "Link",
+   "label": "Purchase Order",
+   "options": "Purchase Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "purchase_receipt",
+   "fieldtype": "Link",
+   "label": "Purchase Receipt",
+   "options": "Purchase Receipt",
+   "read_only": 1
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "ePurchase Invoice Item",
+   "reqd": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "lifecycle_section",
+   "fieldtype": "Section Break",
+   "label": "Lifecycle"
+  },
+  {
+   "fieldname": "lifecycle_logs",
+   "fieldtype": "Table",
+   "label": "Lifecycle Logs",
+   "options": "eInvoicing Lifecycle Log",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Data"
+  },
+  {
+   "fieldname": "xml_content",
+   "fieldtype": "Code",
+   "label": "XML Content",
+   "options": "XML",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_flow_data",
+   "fieldtype": "Code",
+   "label": "Raw Flow Data (JSON)",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-07-28 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPNext eInvoicing",
+ "name": "ePurchase Invoice",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1
+  }
+ ],
+ "sort_field": "invoice_date",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "Orange",
+   "title": "pending"
+  },
+  {
+   "color": "Green",
+   "title": "ready"
+  },
+  {
+   "color": "Blue",
+   "title": "converted"
+  },
+  {
+   "color": "Red",
+   "title": "refused"
+  }
+ ],
+ "title_field": "supplier_name_raw",
+ "track_changes": 1
+}
