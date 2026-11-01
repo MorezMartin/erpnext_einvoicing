@@ -120,17 +120,44 @@ class SuperPdpProvider(BaseProvider):
 			params={"docType": "Converted"},
 			extra_headers={"Accept": "application/octet-stream"},
 		)
-		if result["status_code"] not in (200, 202):
-			frappe.throw(
-				frappe._("Failed to download flow {0} (HTTP {1}).").format(flow_id, result["status_code"])
+		if result["status_code"] in (200, 202):
+			content = result["response"]
+		else:
+			# Fallback : la conversion peut être refusée par la PDP
+			# (CLIENT_NOT_CONFIGURED). Le flux original reste téléchargeable
+			# (PDF FacturX du fournisseur) — on l'utilise à la place.
+			original = self.call_api(
+				f"flows/{flow_id}",
+				"GET",
+				params={"docType": "Original"},
+				extra_headers={"Accept": "application/octet-stream"},
 			)
-		xml_content = result["response"]
-		if not xml_content:
+			if original["status_code"] not in (200, 202) or not isinstance(
+				original["response"], bytes
+			):
+				frappe.throw(
+					frappe._("Failed to download flow {0} (HTTP {1}).").format(
+						flow_id, result["status_code"]
+					)
+				)
+			content = original["response"]
+			frappe.log_error(
+				f"eInvoicing flow {flow_id}: converted unavailable (HTTP {result['status_code']}), ingesting original file instead.",
+				"eInvoicing fallback original",
+			)
+		if not content:
 			frappe.throw(frappe._("Empty response for flow {0}.").format(flow_id))
 
-		from erpnext_einvoicing.erpnext_einvoicing.utils.facturx import create_e_purchase_invoice_from_xml
+		from erpnext_einvoicing.erpnext_einvoicing.utils.facturx import (
+			create_e_purchase_invoice,
+			create_e_purchase_invoice_from_xml,
+		)
 
-		einvoice = create_e_purchase_invoice_from_xml(xml_content, flow_data)
+		# Le contenu peut être un PDF FacturX (XML embarqué) ou du XML nu.
+		if isinstance(content, bytes) and content[:4] == b"%PDF":
+			einvoice = create_e_purchase_invoice(content, flow_data)
+		else:
+			einvoice = create_e_purchase_invoice_from_xml(content, flow_data)
 		self._save_flow_doc(flow_id, flow_data, sync_type, "ePurchase Invoice", einvoice.name)
 
 	### Extra headers

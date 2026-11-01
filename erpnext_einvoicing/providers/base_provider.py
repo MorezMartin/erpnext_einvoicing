@@ -214,18 +214,27 @@ class BaseProvider(ABC):
 		synced = skipped = errors = 0
 		sync_date = now_datetime()
 
+		failed_flow_ids = set(
+			frappe.db.get_all(
+				"eInvoicing Failed Flow",
+				filters={"approved_platform": self.platform.name, "sync_type": sync_type},
+				pluck="flow_id",
+			)
+		)
+
 		for flow in flows:
 			flow_id = flow.get("flowId")
 			if not flow_id:
 				errors += 1
 				continue
-			if flow_id in existing_flow_ids:
+			if flow_id in existing_flow_ids or flow_id in failed_flow_ids:
 				skipped += 1
 				continue
 			try:
 				self._process_flow(flow_id, flow, sync_type)
 				synced += 1
 			except Exception:
+				self._mark_failed_flow(flow_id, sync_type)
 				frappe.log_error(frappe.get_traceback(), f"eInvoicing sync error — flowId {flow_id}")
 				errors += 1
 
@@ -263,7 +272,26 @@ class BaseProvider(ABC):
 		einvoice = create_e_purchase_invoice(pdf_content, flow_data)
 		self._save_flow_doc(flow_id, flow_data, sync_type, "ePurchase Invoice", einvoice.name)
 
+	def _mark_failed_flow(self, flow_id, sync_type):
+		try:
+			doc = frappe.new_doc("eInvoicing Failed Flow")
+			doc.flow_id = flow_id
+			doc.approved_platform = self.platform.name
+			doc.sync_type = sync_type
+			doc.error_type = frappe.get_last_error_type() if hasattr(frappe, "get_last_error_type") else ""
+			doc.error_message = frappe.get_last_error_summary() if hasattr(frappe, "get_last_error_summary") else ""
+			doc.insert(ignore_permissions=True)
+		except Exception:
+			frappe.log_error(
+				frappe.get_traceback(),
+				f"eInvoicing mark failed flow — {flow_id}",
+			)
+
 	def _save_flow_doc(self, flow_id, flow_data, sync_type, document_type, document_name):
+		# Idempotence : un flux déjà enregistré n'est pas ré-inséré (le doc
+		# métier lié a déjà été créé au premier passage).
+		if frappe.db.exists("eInvoicing Flow", {"flow_id": flow_id, "approved_platform": self.platform.name}):
+			return
 		doc = frappe.new_doc("eInvoicing Flow")
 		doc.flow_id = flow_id
 		doc.approved_platform = self.platform.name
