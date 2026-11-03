@@ -5,5 +5,5 @@ import frappe
 from frappe.model.document import Document
 
 
-class EInvoicingFailedFlow(Document):
+class eInvoicingFailedFlow(Document):
 	pass
