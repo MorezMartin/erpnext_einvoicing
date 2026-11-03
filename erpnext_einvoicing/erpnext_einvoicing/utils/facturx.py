@@ -44,12 +44,9 @@ def create_e_purchase_invoice_from_xml(xml_content, flow_data, pdf_content=None)
 
 	xml_format = _detect_xml_format(xml_bytes)
 	if xml_format == "ubl":
-		frappe.throw(
-			frappe._("UBL format is not yet supported for incoming invoices."),
-			title=frappe._("Unsupported Format"),
-		)
-
-	data = _parse_cii(xml_bytes)
+		data = _parse_ubl(xml_bytes)
+	else:
+		data = _parse_cii(xml_bytes)
 	return _create_doc(data, xml_bytes, flow_data, pdf_content)
 
 
@@ -94,6 +91,149 @@ def _detect_xml_format(xml_bytes: bytes):
 		frappe._("Unsupported XML format. Only Factur-X/CII and UBL 2.x are accepted."),
 		title=frappe._("Unsupported Format"),
 	)
+
+
+### UBL Parser
+
+
+_UBL_NS = {
+	"cac": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
+	"cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+}
+
+
+def _parse_ubl(xml_bytes: bytes):
+	root = etree.fromstring(xml_bytes)
+	ns = _UBL_NS
+
+	def get(path, default=""):
+		result = root.xpath(path, namespaces=ns)
+		if not result:
+			return default
+		val = result[0]
+		return (
+			val.text.strip()
+			if hasattr(val, "text") and val.text
+			else (val.strip() if isinstance(val, str) else default)
+	)
+
+	def get_all(path):
+		return root.xpath(path, namespaces=ns)
+
+	### Header
+	invoice_number = get("cbc:ID")
+	type_code = get("cbc:InvoiceTypeCode") or get("cbc:CreditNoteTypeCode")
+	is_credit_note = type_code in ("381", "384", "393") or root.tag.endswith("CreditNote")
+	referenced_invoice_number = get(
+		"cac:BillingReference/cac:InvoiceDocumentReference/cbc:ID"
+	)
+	invoice_date = _parse_ubl_date(get("cbc:IssueDate"))
+	due_date = _parse_ubl_date(get("cbc:DueDate"))
+
+	### Seller
+	seller_base = "cac:AccountingSupplierParty/cac:Party"
+	supplier_name = get(f"{seller_base}/cac:PartyName/cbc:Name")
+	supplier_siret = get(f"{seller_base}/cac:PartyIdentification/cbc:ID[@schemeID='0009']")
+	supplier_siren = get(
+		f"{seller_base}/cac:PartyLegalEntity/cbc:CompanyID[@schemeID='0002']"
+	) or get(f"{seller_base}/cac:PartyLegalEntity/cbc:CompanyID")
+	supplier_vat = ""
+	for tax_party in get_all(f"{seller_base}/cac:PartyTaxScheme"):
+		scheme = tax_party.xpath("cac:TaxScheme/cbc:ID", namespaces=ns)
+		company_id = tax_party.xpath("cbc:CompanyID", namespaces=ns)
+		if company_id and scheme and "VAT" in (scheme[0].text or ""):
+			supplier_vat = (company_id[0].text or "").strip()
+			break
+	supplier_uriid = get(f"{seller_base}/cac:PartyLegalEntity/cbc:CompanyID[@schemeID='9961']")
+
+	address_parts = [
+		get(f"{seller_base}/cac:PostalAddress/cbc:StreetName"),
+		get(f"{seller_base}/cac:PostalAddress/cbc:AdditionalStreetName"),
+		get(f"{seller_base}/cac:PostalAddress/cbc:CityName"),
+		get(f"{seller_base}/cac:PostalAddress/cbc:PostalZone"),
+		get(f"{seller_base}/cac:PostalAddress/cac:Country/cbc:IdentificationCode"),
+	]
+	supplier_address = "\n".join(p for p in address_parts if p)
+
+	### Buyer
+	buyer_base = "cac:AccountingCustomerParty/cac:Party"
+	buyer_siret = get(
+		f"{buyer_base}/cac:PartyLegalEntity/cbc:CompanyID[@schemeID='0009']"
+	) or get(f"{buyer_base}/cac:PartyLegalEntity/cbc:CompanyID")
+
+	### Settlement
+	currency = get("cbc:DocumentCurrencyCode") or "EUR"
+	monetary_base = "cac:LegalMonetaryTotal"
+	total_ht = _to_float(get(f"{monetary_base}/cbc:TaxExclusiveAmount"))
+	total_ttc = _to_float(get(f"{monetary_base}/cbc:TaxInclusiveAmount"))
+	total_vat = _to_float(get("cac:TaxTotal/cbc:TaxAmount"))
+	if not total_vat and total_ttc:
+		total_vat = round(total_ttc - total_ht, 2)
+
+	### Items
+	items = []
+	for line in get_all("cac:InvoiceLine | cac:CreditNoteLine"):
+
+		def line_get(xpath):
+			result = line.xpath(xpath, namespaces=ns)
+			if not result:
+				return ""
+			val = result[0]
+			return (
+				val.text.strip()
+				if hasattr(val, "text") and val.text
+				else (val.strip() if isinstance(val, str) else "")
+			)
+
+		description = line_get("cac:Item/cbc:Name")
+		ref = line_get("cac:Item/cac:SellersItemIdentification/cbc:ID")
+		qty = _to_float(line_get("cbc:InvoicedQuantity") or line_get("cbc:CreditedQuantity"))
+		uom = line_get("cbc:InvoicedQuantity/@unitCode") or line_get("cbc:CreditedQuantity/@unitCode")
+		unit_price = _to_float(line_get("cac:Price/cbc:PriceAmount"))
+		amount = _to_float(line_get("cbc:LineExtensionAmount"))
+		tax_rate = _to_float(line_get("cac:Item/cac:ClassifiedTaxCategory/cbc:Percent"))
+
+		items.append(
+			{
+				"item_description_raw": description,
+				"item_ref_raw": ref,
+				"qty": qty or 1,
+				"uom": uom,
+				"unit_price": unit_price,
+				"amount": amount,
+				"tax_rate": tax_rate,
+				"match_status": "unmatched",
+			}
+		)
+
+	return {
+		"invoice_number": invoice_number,
+		"is_credit_note": is_credit_note,
+		"referenced_invoice_number": referenced_invoice_number,
+		"invoice_date": invoice_date,
+		"due_date": due_date,
+		"currency": currency,
+		"supplier_name_raw": supplier_name,
+		"supplier_siret": supplier_siret,
+		"supplier_siren": supplier_siren,
+		"supplier_vat": supplier_vat,
+		"supplier_uriid": supplier_uriid,
+		"supplier_address_raw": supplier_address,
+		"buyer_siret": buyer_siret,
+		"total_ht": total_ht,
+		"total_vat": total_vat,
+		"total_ttc": total_ttc,
+		"items": items,
+	}
+
+
+def _parse_ubl_date(date_str: str):
+	if not date_str:
+		return None
+	try:
+		return datetime.strptime(date_str.strip(), "%Y-%m-%d").date()
+	except ValueError:
+		return None
 
 
 ### CII Parser

@@ -133,11 +133,11 @@ class SuperPdpProvider(BaseProvider):
 				extra_headers={"Accept": "application/octet-stream"},
 			)
 			if original["status_code"] not in (200, 202) or not isinstance(
-				original["response"], bytes
+				original["response"], (bytes, str)
 			):
 				frappe.throw(
 					frappe._("Failed to download flow {0} (HTTP {1}).").format(
-						flow_id, result["status_code"]
+						flow_id, original["status_code"]
 					)
 				)
 			content = original["response"]
