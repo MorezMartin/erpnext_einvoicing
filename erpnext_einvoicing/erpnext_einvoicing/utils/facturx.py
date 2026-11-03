@@ -132,7 +132,9 @@ def _parse_ubl(xml_bytes: bytes):
 
 	### Seller
 	seller_base = "cac:AccountingSupplierParty/cac:Party"
-	supplier_name = get(f"{seller_base}/cac:PartyName/cbc:Name")
+	supplier_name = get(f"{seller_base}/cac:PartyName/cbc:Name") or get(
+		f"{seller_base}/cac:PartyLegalEntity/cbc:RegistrationName"
+	)
 	supplier_siret = get(f"{seller_base}/cac:PartyIdentification/cbc:ID[@schemeID='0009']")
 	supplier_siren = get(
 		f"{seller_base}/cac:PartyLegalEntity/cbc:CompanyID[@schemeID='0002']"
