@@ -9,6 +9,7 @@
  "field_order": [
   "flow_id",
   "sync_type",
+  "approved_platform",
   "error_type",
   "error_message",
   "section_break_details",
@@ -29,6 +30,13 @@
    "in_list_view": 1,
    "label": "Sync Type",
    "reqd": 1
+  },
+  {
+   "fieldname": "approved_platform",
+   "fieldtype": "Data",
+   "label": "Approved Platform",
+   "length": 140,
+   "in_list_view": 1
   },
   {
    "fieldname": "error_type",
